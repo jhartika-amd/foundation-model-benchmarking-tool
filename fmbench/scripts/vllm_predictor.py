@@ -98,18 +98,15 @@ class CustomRestPredictor(FMBenchPredictor):
 
         completion_tokens: Optional[int] = None
         streaming: Optional[bool] = None
-        # add logic to retry if there are throttling errors
-        INITIAL_RETRY_DELAY: float = 2.0 
-        MAX_RETRY_DELAY: float = 60.0  
-        retry_count = 0
-
+   
         # This is the generated text from the model prediction
         generated_text: Optional[str] = None
         
         try:
-            #model_id = self._inference_spec.get("model_id")
-            #model = "hosted_vllm/" + model_id
-            model = "hosted_vllm/amd/Llama-3.1-70B-Instruct-FP8-KV"
+            model_id = self._inference_spec.get("model_id")
+            logger.info(f"model_id:{model_id}")
+
+            model = "hosted_vllm/" + model_id
                 
             logger.info("Going to use the standard text generation messages format to get inferences using Litellm")
             messages = [{"content": payload['inputs'], "role": "user"}]
@@ -124,23 +121,6 @@ class CustomRestPredictor(FMBenchPredictor):
                                   caching=self._caching,
                                   stream=self._stream)
             
-            #async def completion_call():
-            #    try:
-            #    print("test acompletion + streaming")
-            #    response = await acompletion(
-            #        model="gpt-3.5-turbo", 
-            #        messages = [{"content": payload['inputs'], "role": "user"}]
-            #        stream=True
-            #    )
-            #    print(f"response: {response}")
-            #    async for chunk in response:
-            #        print(chunk)
-            #except:
-            #    print(f"error occurred: {traceback.format_exc()}")
-            #    pass
-
-            #asyncio.run(completion_call())
-
             # Extract latency in seconds
             latency = time.perf_counter() - st
                 
