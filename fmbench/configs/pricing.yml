@@ -33,6 +33,7 @@ pricing:
     ml.p5.48xlarge: 113.068
     ml.trn1.32xlarge: 28.497
     p5e.48xlarge: 110.92
+    vllm-rocm-mi300x: 88.736
   token_based:
     ai21.j2-mid-v1:
       input-per-1k-tokens: 0.0125

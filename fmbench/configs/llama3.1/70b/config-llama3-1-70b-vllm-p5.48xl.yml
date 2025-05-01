@@ -1,7 +1,7 @@
 # config file for a rest endpoint supported on fmbench - 
 # this file uses a llama-3-70b-instruct deployed on ec2 on an inf2 instance
 general:
-  name: "llama3.1-70b-vllm-rocm-mi300x"      
+  name: "llama3.1-70b-vllm-ml.p5.48xlarge"      
   model_name: "llama3-1-70b-instruct"
   
 # AWS and SageMaker settings
@@ -140,7 +140,7 @@ pricing: pricing.yml
 # Use the section name (sagemaker in this example) in the inference_spec.parameter_set
 # section under experiments.
 inference_parameters: 
-  vllm-rocm-mi300x:
+  ml.p5.48xlarge:
     temperature: 0.1
     top_p: 0.92
     top_k: 120  
@@ -156,7 +156,7 @@ experiments:
     region: {region}
     # this can be changed to the IP address of your specific EC2 instance where the model is hosted
     ep_name: 'http://localhost:8000/v1' 
-    instance_type: "vllm-rocm-mi300x"
+    instance_type: "ml.p5.48xlarge"
     model_id: 'amd/Llama-3.1-70B-Instruct-FP8-KV' 
     image_uri: 763104351884.dkr.ecr.{region}.amazonaws.com/djl-inference:0.29.0-lmi11.0.0-cu124
     deploy: no #setting to yes to run deployment script for ec2
@@ -175,7 +175,7 @@ experiments:
     inference_spec:
       model_id: 'amd/Llama-3.1-70B-Instruct-FP8-KV' 
       # this should match one of the sections in the inference_parameters section above
-      parameter_set: vllm-rocm-mi300x
+      parameter_set: ml.p5.48xlarge
       # how many copies of the model, 1, 2,..max
       # set to 1 in the code if not configured, setting to max means that 
       # the code will determine how many copies can be loaded based on TP and 

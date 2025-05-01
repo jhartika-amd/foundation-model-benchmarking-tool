@@ -1,7 +1,7 @@
 # config file for a rest endpoint supported on fmbench - 
 # this file uses a llama-3-70b-instruct deployed on ec2 on an inf2 instance
 general:
-  name: "llama3.1-70b-vllm-rocm-mi300x"      
+  name: "llama3.1-70b-vllm-ml.p5.48xlarge"      
   model_name: "llama3-1-70b-instruct"
   
 # AWS and SageMaker settings
@@ -80,6 +80,14 @@ run_steps:
   3_run_inference.ipynb: yes
   4_model_metric_analysis.ipynb: yes
   5_cleanup.ipynb: no
+  #0_setup.ipynb: yes
+  #1_generate_data.ipynb: yes
+  #2_deploy_model.ipynb: no
+  #3_run_inference.ipynb: yes
+  #4_get_evaluations.ipynb: yes
+  #5_model_metric_analysis.ipynb: yes
+  #6_cleanup.ipynb: no
+
 
 datasets:
   # dataset related configuration
@@ -87,9 +95,11 @@ datasets:
   - input
   - context
   # maximum number of iterations per concurrency and payload size combination
-  max_iters_per_combination: 105
+  #max_iters_per_combination: 105
   # minimum number of iterations per concurrency and payload size combination
-  min_iters_per_combination: 5
+  #min_iters_per_combination: 5
+  ground_truth_col_key: answers
+  question_col_key: input
   
   # if your dataset has multiple languages and it has a language
   # field then you could filter it for a language. Similarly,
@@ -120,6 +130,11 @@ datasets:
     max_length_in_tokens: 3840
     payload_file: payload_en_3000-3840.jsonl
 
+# name of the file that contains the model evaluation information
+# for example, the prompt template names, the ground truth column name (if any), 
+# LLM panelist information, inference parameters, etc.
+model_evaluations: model_eval_all_info.yml
+
 # While the tests would run on all the datasets
 # configured in the experiment entries below but 
 # the price:performance analysis is only done for 1
@@ -140,11 +155,11 @@ pricing: pricing.yml
 # Use the section name (sagemaker in this example) in the inference_spec.parameter_set
 # section under experiments.
 inference_parameters: 
-  vllm-rocm-mi300x:
+  ml.p5.48xlarge:
     temperature: 0.1
+    max_tokens: 100
     top_p: 0.92
-    top_k: 120  
-    max_new_tokens: 100
+    caching: False
 
 # Configuration for experiments to be run. The experiments section is an array
 # so more than one experiments can be added, these could belong to the same model
@@ -156,8 +171,8 @@ experiments:
     region: {region}
     # this can be changed to the IP address of your specific EC2 instance where the model is hosted
     ep_name: 'http://localhost:8000/v1' 
-    instance_type: "vllm-rocm-mi300x"
-    model_id: 'amd/Llama-3.1-70B-Instruct-FP8-KV' 
+    instance_type: "ml.p5.48xlarge" 
+    model_id: 'amd/Llama-3.1-70B-Instruct-FP8-KV'
     image_uri: 763104351884.dkr.ecr.{region}.amazonaws.com/djl-inference:0.29.0-lmi11.0.0-cu124
     deploy: no #setting to yes to run deployment script for ec2
     stream: True
@@ -168,33 +183,24 @@ experiments:
     # and Bedrock. You can also add your own. This is an example for a rest DJL predictor
     # for a llama3-70b-instruct deployed on ec2
     inference_script: vllm_predictor.py
+    #inference_script: custom_rest_predictor_vllm_openai.py
     # This section defines the settings for Amazon EC2 instances
     ec2:
       #This setting specifies the timeout (in seconds) for loading the model. 
       model_loading_timeout: 2400
     inference_spec:
-      model_id: 'amd/Llama-3.1-70B-Instruct-FP8-KV' 
+      model_id: 'amd/Llama-3.1-70B-Instruct-FP8-KV'
+      split_input_and_parameters: no
       # this should match one of the sections in the inference_parameters section above
-      parameter_set: vllm-rocm-mi300x
+      parameter_set: ml.p5.48xlarge
       # how many copies of the model, 1, 2,..max
       # set to 1 in the code if not configured, setting to max means that 
       # the code will determine how many copies can be loaded based on TP and 
       # number of GPU/Neuron devices available
-      model_copies: max
-      # if you set the model_copies parameter then it is mandatory to set the 
-      # tp_degree, shm_size, model_loading_timeout parameters
-      tp_degree: 8
-      shm_size: 12g
-      model_loading_timeout: 2400
       stream: True
+      start_token:
+      stop_token: "<|eot_id|>"
       #stream: False
-    # modify the serving properties to match your model and requirements
-    serving.properties: |
-      engine=MPI
-      option.tensor_parallel_degree=8
-      option.max_rolling_batch_size=4
-      option.model_id=meta-llama/Meta-Llama-3.1-70b-Instruct
-      option.rolling_batch=lmi-dist
 
     # runs are done for each combination of payload file and concurrency level
     payload_files:

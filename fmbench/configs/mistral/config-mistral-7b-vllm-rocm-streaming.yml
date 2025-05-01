@@ -55,19 +55,9 @@ s3_read_data:
   - narrativeqa.jsonl
   - triviaqa_e.jsonl
   - triviaqa.jsonl
-  # S3 prefix for the tokenizer to be used with the models
-  # NOTE 1: the same tokenizer is used with all the models being tested through a config file
-  # NOTE 2: place your model specific tokenizers in a prefix named as <model_name>_tokenizer
-  #         so the mistral tokenizer goes in mistral_tokenizer, Llama2 tokenizer goes in  llama2_tokenizer
-  tokenizer_prefix: llama3_1_tokenizer
-
-  # S3 prefix for prompt templates
+  tokenizer_prefix: mistral_tokenizer ## add the tokenizer.json and config.json from your specific tokenizer type
   prompt_template_dir: prompt_template
-
-  # prompt template to use, NOTE: same prompt template gets used for all models being tested through a config file
-  # the FMBench repo already contains a bunch of prompt templates so review those first before creating a new one
-  prompt_template_file: prompt_template_llama3.txt
-
+  prompt_template_file: prompt_template_mistral.txt ## add your desired prompt template type
 # steps to run, usually all of these would be
 # set to yes so nothing needs to change here
 # you could, however, bypass some steps for example
@@ -90,24 +80,9 @@ run_steps:
 
 
 datasets:
-  # dataset related configuration
   prompt_template_keys:
   - input
   - context
-  # maximum number of iterations per concurrency and payload size combination
-  #max_iters_per_combination: 105
-  # minimum number of iterations per concurrency and payload size combination
-  #min_iters_per_combination: 5
-  ground_truth_col_key: answers
-  question_col_key: input
-  
-  # if your dataset has multiple languages and it has a language
-  # field then you could filter it for a language. Similarly,
-  # you can filter your dataset to only keep prompts between
-  # a certain token length limit (the token length is determined
-  # using the tokenizer you provide in the tokenizer_prefix prefix in the
-  # read S3 bucket). Each of the array entries below create a payload file
-  # containing prompts matching the language and token length criteria.
   filters:
   - language: en    
     min_length_in_tokens: 1
@@ -127,20 +102,21 @@ datasets:
     payload_file: payload_en_2000-3000.jsonl
   - language: en
     min_length_in_tokens: 3000
-    max_length_in_tokens: 3840
-    payload_file: payload_en_3000-3840.jsonl
+    max_length_in_tokens: 4000
+    payload_file: payload_en_3000-4000.jsonl
+  - language: en
+    min_length_in_tokens: 305
+    max_length_in_tokens: 3997
+    payload_file: payload_en_305-3997.jsonl
 
-# name of the file that contains the model evaluation information
-# for example, the prompt template names, the ground truth column name (if any), 
-# LLM panelist information, inference parameters, etc.
-model_evaluations: model_eval_all_info.yml
+
 
 # While the tests would run on all the datasets
 # configured in the experiment entries below but 
 # the price:performance analysis is only done for 1
 # dataset which is listed below as the dataset_of_interest
 metrics:
-  dataset_of_interest: en_3000-3840
+  dataset_of_interest: en_2000-3000
   
 # all pricing information is in the pricing.yml file
 # this file is provided in the repo. You can add entries
@@ -171,7 +147,8 @@ experiments:
     region: {region}
     # this can be changed to the IP address of your specific EC2 instance where the model is hosted
     ep_name: 'http://localhost:8000/v1' 
-    instance_type: "vllm-rocm" 
+    instance_type: "vllm-rocm-mi300x"
+    model_id: 'amd/Mistral-7B-v0.1-FP8-KV'
     image_uri: 763104351884.dkr.ecr.{region}.amazonaws.com/djl-inference:0.29.0-lmi11.0.0-cu124
     deploy: no #setting to yes to run deployment script for ec2
     stream: True
@@ -191,7 +168,7 @@ experiments:
       model_id: 'amd/Mistral-7B-v0.1-FP8-KV'
       split_input_and_parameters: no
       # this should match one of the sections in the inference_parameters section above
-      parameter_set: vllm-rocm
+      parameter_set: vllm-rocm-mi300x
       # how many copies of the model, 1, 2,..max
       # set to 1 in the code if not configured, setting to max means that 
       # the code will determine how many copies can be loaded based on TP and 
@@ -207,22 +184,20 @@ experiments:
     - payload_en_500-1000.jsonl
     - payload_en_1000-2000.jsonl
     - payload_en_2000-3000.jsonl
-    - payload_en_3000-3840.jsonl
     # concurrency level refers to number of requests sent in parallel to an endpoint
     # the next set of requests is sent once responses for all concurrent requests have
     # been received.
     concurrency_levels:
     - 1
     - 2
-    - 3
     - 4
     # Environment variables to be passed to the container
     # this is not a fixed list, you can add more parameters as applicable.
     env:
 
 report:
-  latency_budget: 3
-  cost_per_10k_txn_budget: 200
+  latency_budget: 5
+  cost_per_10k_txn_budget: 20
   error_rate_budget: 0
   per_inference_request_file: per_inference_request_results.csv
   all_metrics_file: all_metrics.csv
